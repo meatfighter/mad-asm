@@ -1,4 +1,4 @@
-; 16-bit MAD Computer Program COM
+; MAD ASM
 ; nasm mad.asm -fbin -o mad.com
 
     org 100h 
@@ -6,27 +6,34 @@
 section .text 
  
 main:
-
-    ; Push current video mode onto stack
+   
+    ; Push active display page (bh), current video mode (al), and number of character columns (ah) onto the stack
     mov ah, 0fh
     int 10h
+    push bx
     push ax
 
-    ; Set mode to CGA 320x200
+    ; Change to medium resolution CGA mode (320x200 pixels, 4 colors)
     mov ax, 0004h
     int 10h
 
-    ; write pixel dot
-    mov ah, 0ch
-    mov al, 07h
-    mov cx, 160
-    mov dx, 100
+    ; Set background color to gray
+    mov ah, 0bh
+    mov bx, 0007h
     int 10h
 
-    ; Restore original video mode
-    pop ax
-    mov ah, 00h    
-    int 10h
+
+
+    ; ; Restore original video mode
+    ; pop ax
+    ; mov ah, 00h    
+    ; int 10h
+
+    ; ; Restore original active display page
+    ; mov ah, 05h
+    ; pop bx
+    ; mov al, bh
+    ; int 10h
 
     ; exit
     int 20h
