@@ -184,14 +184,14 @@ section .data
 
     lines   dw  522
 
-    x0      db  0
-    y0      db  0
-    x1      db  0
-    y1      db  0
-    delX    db  0
-    delY    db  0
+    x0      db  0 
+    y0      db  0 
+    x1      db  0 
+    y1      db  0 
+    delX    db  0 
+    delY    db  0 
     err     db  0
-
+    
     endpoints:
         dd 0x5f7a6476, 0x5f7c6674, 0x5e885e7e, 0x66776776, 0x75647668, 0x695a7566, 0x4c964c8c, 0x50735573, 0x75656a5a
         dd 0x615a6a5b, 0x4d964d8c, 0x4c745474, 0x635b685a, 0x6ac873c6, 0x4b7d5091, 0x2d98299c, 0x89608056, 0x75547054
