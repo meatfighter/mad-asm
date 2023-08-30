@@ -42,10 +42,9 @@ section .text
         mov [.x1_1+1], ah                       ;   modify code: cmp al, x1
         inc si                                  ;   ++si;
 
-        sub ah, [x0]
-        mov [delX], ah                          ;   delX = x1 - x0;
+        sub ah, [x0]                            ;   delX = x1 - x0;
         jns .delXPos                            ;   if (delX < 0) {
-            neg byte [delX]                     ;       delX = -delX;
+            neg ah                              ;       delX = -delX;
             
             mov byte [.stepX+1], 0eh            ;       modify code: --x0;
 
@@ -53,17 +52,22 @@ section .text
         .delXPos:                               ;   } else {
             mov byte [.stepX+1], 06h            ;       modify code: ++x0;
         .delXEnd:                               ;   }
-
+        mov [.delX_0+1], ah                     ;   modify code: add al, delX
+        mov [.delX_1+1], ah                     ;   modify code: mov al, delX
+        mov [.delX_2+1], ah                     ;   modify code: add al, delX
+        
         mov ah, [si]                            ;   y1 = *si;
         mov [.y1_0+2], ah                       ;   modify code: cmp ah, y1
         mov [.y1_1+1], ah                       ;   modify code: cmp al, y1
         inc si                                  ;   ++si;
 
         mov al, [y0]
-        sub al, ah
-        mov [delY], al                          ;   delY = y0 - y1;
-
-        add al, [delX]
+        sub al, ah                              ;   delY = y0 - y1;
+        mov [.delY_0+2], al                     ;   modify code: cmp ah, delY
+        mov [.delY_1+1], al                     ;   modify code: add al, delY
+                 
+        .delX_0:
+            add al, 0xff                        ;   modified code: add al, delX
         mov [err], al                           ;   err = delX + delY;
 
         .plotLoop:                              ;   while (true) {
@@ -123,7 +127,8 @@ section .text
             mov ah, [err]
             shl ah, 1                           ;       ah = err << 1;
 
-            cmp ah, [delY]                         
+            .delY_0:
+                cmp ah, 0xff                    ;       modified code: cmp ah, delY
             js .e2dyEnd                         ;       if (ah >= delY) {
                 mov al, [x0]                    
                 .x1_1:
@@ -132,15 +137,18 @@ section .text
                 je .endPlotLoop                 ;               break;
                                                 ;           }
 
-                mov al, [err]                   
-                add al, [delY]
+                mov al, [err]
+                .delY_1:                   
+                    add al, 0xff                ;           modified code: add al, delY
                 mov [err], al                   ;           err += delY;
                 
                 .stepX:
                     inc byte [x0]               ;           modified code: ++x0; or --x0;                
             .e2dyEnd:                           ;       }
 
-            cmp [delX], ah                         
+            .delX_1:
+                mov al, 0xff                    ;       modified code: mov al, delX
+            cmp al, ah                         
             js .dxe2End                         ;       if (delX >= ah) {
                 mov al, [y0]                    
                 .y1_1:
@@ -148,8 +156,9 @@ section .text
                                                 ;           if (y0 == y1) {
                 je .endPlotLoop                 ;               break;                                                
                                                 ;           }
-                mov al, [err]                   
-                add al, [delX]
+                mov al, [err]
+                .delX_2:                   
+                    add al, 0xff                ;           modified code: add al, delX
                 mov [err], al                   ;           err += delX;
                 
                 inc byte [y0]                   ;           ++y0;                
@@ -192,8 +201,6 @@ section .data
 
     x0      db  0
     y0      db  0
-    delX    db  0
-    delY    db  0
     err     db  0
 
     endpoints:
