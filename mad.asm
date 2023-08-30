@@ -1,7 +1,13 @@
-; MAD ASM
-; nasm mad.asm -fbin -o mad.com
+; MADasm
+;
+; 
+
+; compile: nasm mad.asm -f bin -o mad.com
+;
+; Run in DOSBox or on a PC with a Color Graphics Adapter (CGA)
 
 cpu 8086
+bits 16
 org 100h 
  
 section .text
@@ -26,7 +32,7 @@ section .text
     mov bx, 0100h
     int 10h
 
-    ; Draw line segments
+    ; Draw 522 line segments
     mov dx, 522                                 ;   lines = 522;
     mov si, endpoints                           ;   si = endpoints;
     .drawLines:
@@ -108,7 +114,7 @@ section .text
             ; ----------------------------------------------------------------------------------------------------------
 
             .x1_0:
-                cmp bl, 0xff                    ;       modified code: cmp bl, x1 
+                cmp bl, 0xff                    ;       modified code: cmp x0, x1 
             jne .ptsNotEq                       ;       if (x0 == x1) {                                  
                 .y1_0:    
                     cmp bh, 0xff                ;           modified code: cmp y0, y1
@@ -159,14 +165,58 @@ section .text
         jnz .drawLines                          ;       goto drawLines;
                                                 ;   }
 
+    
+    ; Print motto at column 12 and row 23 in brown
+    mov bx, 3
+    mov cx, 1
+    mov dx, 170Ch
+    mov si, motto
+    .printMotto:
+        mov al, [si]
+        test al, al
+        jz .endPrintMotto
 
-    ; Wait for a keypress
-    .waitForKey:
-        mov ah, 01h
-        int 16h
-        jz .waitForKey
-    mov ah, 00h
-    int 16h    
+        mov ah, 02h    
+        int 10h
+
+        mov ah, 09h        
+        int 10h
+
+        inc dl
+        inc si
+        jmp .printMotto        
+    .endPrintMotto:    
+
+    call .waitForKeypress                       ;   waitForKeyPress();
+
+    ; Change to 80x25 16-color text mode
+    mov ax, 0003h
+    int 10h
+
+    ; Hide the cursor
+    mov ah, 01h
+    mov cx, 2020h
+    int 10h
+
+    ; Print copyright at column 22 and row 11 in gray
+    mov ax, 0xb800
+    mov es, ax
+    mov si, copyright
+    mov di, 2 * 22 + 160 * 11
+    .printCopyright:
+        mov al, [si]
+        test al, al
+        jz .endPrintCopyright
+
+        mov [es:di], al
+        mov [es:di+1], byte 7
+                
+        inc si
+        add di, 2
+        jmp .printCopyright
+    .endPrintCopyright:    
+
+    call .waitForKeypress                       ;   waitForKeyPress();
 
     ; Restore original video mode
     pop ax
@@ -182,6 +232,17 @@ section .text
     ; Exit
     mov ax, 4c00h
     int 21h
+
+    ; waitForKeyPress() ------------------------------------------------------------------------------------------------
+    .waitForKeypress:
+        .waitLoop:
+            mov ah, 01h
+            int 16h
+            jz .waitLoop
+        mov ah, 00h
+        int 16h
+        ret
+    ; ------------------------------------------------------------------------------------------------------------------        
 
 section .data
 
@@ -244,3 +305,6 @@ section .data
         dd 0x0a460646, 0x0a440644, 0x0a490a47, 0x21440b4a, 0x22430b49, 0x28402847, 0x293e2944, 0x223e2243, 0x293e223e
         dd 0x283d233d, 0x18df12df, 0x1ade10de, 0x11dd10dd, 0x1ddc18de, 0x21d71cdd, 0x0fdd0bd8, 0x0edd09d7, 0x09d009d7
         dd 0x0ad80acd, 0x21d021d7, 0x20cd20ce, 0x0bcd0bce, 0x1fcc0bcc, 0x17a30d9e, 0x17a20d9d, 0x179717a1, 0x17960e9d
+
+    motto       db  'WHAT, ME WORRY?', 0
+    copyright   db  'COPYRIGHT 1985 E.C. PUBLICATIONS', 0
