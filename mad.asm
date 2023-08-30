@@ -26,41 +26,49 @@ section .text
     mov bx, 0100h
     int 10h
 
-    ; Draw line segments
-        
-    mov si, endpoints
-    cld
+    ; Draw line segments        
+    mov si, endpoints                           ;   si = endpoints;
     .drawLines:
-        mov ax, ds
-        mov es, ax
-        mov di, x0               
-        movsw                                   ;   x0 = endpoints[si++]; y0 = endpoints[si++];
-        movsw                                   ;   x1 = endpoints[si++]; y1 = endpoints[si++];
+        mov ah, [si]
+        mov [x0], ah                            ;   x0 = *si;
+        inc si                                  ;   ++si;
 
-        mov ah, [x1]
+        mov ah, [si]
+        mov [y0], ah                            ;   y0 = *si;
+        inc si                                  ;   ++si;
+
+        mov ah, [si]                            ;   x1 = *si;
+        mov [.x1_0+2], ah                       ;   modify code: cmp ah, x1
+        mov [.x1_1+1], ah                       ;   modify code: cmp al, x1
+        inc si                                  ;   ++si;
+
         sub ah, [x0]
         mov [delX], ah                          ;   delX = x1 - x0;
         jns .delXPos                            ;   if (delX < 0) {
             neg byte [delX]                     ;       delX = -delX;
             
-            mov byte [.stepX+1], 0eh            ;       self-modifying code (--x0;)
+            mov byte [.stepX+1], 0eh            ;       modify code: --x0;
 
             jmp .delXEnd
         .delXPos:                               ;   } else {
-            mov byte [.stepX+1], 06h            ;       self-modifying code (++x0;)
+            mov byte [.stepX+1], 06h            ;       modify code: ++x0;
         .delXEnd:                               ;   }
 
-        mov ah, [y0]
-        sub ah, [y1]
-        mov [delY], ah                          ;   delY = y0 - y1;
+        mov ah, [si]                            ;   y1 = *si;
+        mov [.y1_0+2], ah                       ;   modify code: cmp ah, y1
+        mov [.y1_1+1], ah                       ;   modify code: cmp al, y1
+        inc si                                  ;   ++si;
 
-        mov ah, [delX]
-        add ah, [delY]
-        mov [err], ah                           ;   err = delX + delY;
+        mov al, [y0]
+        sub al, ah
+        mov [delY], al                          ;   delY = y0 - y1;
+
+        add al, [delX]
+        mov [err], al                           ;   err = delX + delY;
 
         .plotLoop:                              ;   while (true) {
 
-            ; -- write two adjacent red pixels at (x0, y0) and (x0 + 1, y0) --------------------------------------------
+            ; -- draw two horizontally-adjacent red pixels at (x0, y0) and (x0 + 1, y0) --------------------------------
             mov ah, [y0]
             and ah, 1
             shl ah, 1
@@ -101,36 +109,45 @@ section .text
             ; ----------------------------------------------------------------------------------------------------------
 
             mov ah, [x0]
-            cmp ah, [x1]                        ;       if (x0 == x1) {
-            jne .ptsNotEq       
-                mov ah, [y0]                    ;           if (y0 == y1) {
-                cmp ah, [y1]                    ;               break; 
-                je .endPlotLoop                 ;           }             
-            .ptsNotEq:                          ;       }
+            .x1_0:
+                cmp ah, 0xff                    ;       modified code: cmp ah, x1 
+            jne .ptsNotEq                       ;       if (x0 == x1) {
+                mov ah, [y0]                                    
+                .y1_0:    
+                    cmp ah, 0xff                ;           modified code: cmp ah, y1
+                                                ;           if (y0 == y1) {
+                je .endPlotLoop                 ;               break;          
+            .ptsNotEq:                          ;           }   
+                                                ;       }
 
             mov ah, [err]
             shl ah, 1                           ;       ah = err << 1;
 
             cmp ah, [delY]                         
             js .e2dyEnd                         ;       if (ah >= delY) {
-                mov al, [x0]                    ;           if (x0 == x1) {
-                cmp al, [x1]                    ;               break;
-                je .endPlotLoop                 ;           }
+                mov al, [x0]                    
+                .x1_1:
+                    cmp al, 0xff                ;           modified code: cmp al, x1
+                                                ;           if (x0 == x1) {         
+                je .endPlotLoop                 ;               break;
+                                                ;           }
 
                 mov al, [err]                   
                 add al, [delY]
                 mov [err], al                   ;           err += delY;
                 
                 .stepX:
-                    inc byte [x0]               ;           self-modifying code: ++x0; or --x0;                
+                    inc byte [x0]               ;           modified code: ++x0; or --x0;                
             .e2dyEnd:                           ;       }
 
             cmp [delX], ah                         
             js .dxe2End                         ;       if (delX >= ah) {
-                mov al, [y0]                    ;           if (y0 == y1) {
-                cmp al, [y1]                    ;               break;
-                je .endPlotLoop                 ;           }
-
+                mov al, [y0]                    
+                .y1_1:
+                    cmp al, 0xff                ;           modified code: cmp al, y1                    
+                                                ;           if (y0 == y1) {
+                je .endPlotLoop                 ;               break;                                                
+                                                ;           }
                 mov al, [err]                   
                 add al, [delX]
                 mov [err], al                   ;           err += delX;
@@ -175,8 +192,6 @@ section .data
 
     x0      db  0
     y0      db  0
-    x1      db  0 
-    y1      db  0 
     delX    db  0
     delY    db  0
     err     db  0
