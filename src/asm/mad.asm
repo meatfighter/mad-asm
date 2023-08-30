@@ -81,13 +81,12 @@ section .text
             mov al, 0
             mov es, ax                          ;       es = 0xb800 | ((y0 & 1) << 9);
 
-            mov di, 0
             mov ah, 0
             mov al, bh
             shr ax, 1
             mov cl, 4
             shl ax, cl
-            add di, ax
+            mov di, ax
             shl ax, 1
             shl ax, 1
             add di, ax                          ;       di = 80 * (y0 >> 1);
@@ -164,7 +163,6 @@ section .text
         dec dx                                  ;   if (--lines != 0) {
         jnz .drawLines                          ;       goto drawLines;
                                                 ;   }
-
     
     ; Print motto at column 12 and row 23 in brown
     mov bx, 3
