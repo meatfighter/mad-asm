@@ -1,8 +1,8 @@
 ; MAD ASM
 ; nasm mad.asm -fbin -o mad.com
 
-    cpu 8086
-    org 100h 
+cpu 8086
+org 100h 
  
 section .text
 
@@ -36,8 +36,8 @@ section .text
         inc si                                  ;   ++si;
 
         mov ah, [si]                            ;   x1 = *si;
-        mov [.x1_0+2], ah                       ;   modify code: cmp bl, x1
-        mov [.x1_1+1], ah                       ;   modify code: cmp al, x1
+        mov [.x1_0+2], ah                       ;   modify code: cmp x0, x1
+        mov [.x1_1+2], ah                       ;   modify code: cmp x0, x1
         inc si                                  ;   ++si;
 
         sub ah, bl                              ;   delX = x1 - x0;
@@ -48,23 +48,21 @@ section .text
         .delXPos:                               ;   } else {
             mov byte [.stepX+1], 0xc3           ;       modify code: inc x0
         .delXEnd:                               ;   }
-        mov [.delX_0+1], ah                     ;   modify code: add al, delX
         mov [.delX_1+1], ah                     ;   modify code: mov al, delX
         mov [.delX_2+1], ah                     ;   modify code: add al, delX
+        mov ch, ah                              ;   err = delX;
         
         mov ah, [si]                            ;   y1 = *si;
-        mov [.y1_0+2], ah                       ;   modify code: cmp ah, y1
-        mov [.y1_1+1], ah                       ;   modify code: cmp al, y1
+        mov [.y1_0+2], ah                       ;   modify code: cmp y0, y1
+        mov [.y1_1+2], ah                       ;   modify code: cmp y0, y1
         inc si                                  ;   ++si;
 
         mov al, bh
         sub al, ah                              ;   delY = y0 - y1;
         mov [.delY_0+2], al                     ;   modify code: cmp ah, delY
-        mov [.delY_1+1], al                     ;   modify code: add al, delY
+        mov [.delY_1+2], al                     ;   modify code: add err, delY
                  
-        .delX_0:
-            add al, 0xff                        ;   modified code: add al, delX
-        mov [err], al                           ;   err = delX + delY;
+        add ch, al                              ;   err += delY;
 
         .plotLoop:                              ;   while (true) {
 
@@ -74,7 +72,7 @@ section .text
             shl ah, 1
             or ah, 0xb8
             mov al, 0
-            mov es, ax                          ;   es = 0xb800 | ((y0 & 1) << 9);
+            mov es, ax                          ;       es = 0xb800 | ((y0 & 1) << 9);
 
             mov di, 0
             mov ah, 0
@@ -85,57 +83,53 @@ section .text
             add di, ax
             shl ax, 1
             shl ax, 1
-            add di, ax                          ;   di = 80 * (y0 >> 1);
+            add di, ax                          ;       di = 80 * (y0 >> 1);
 
             mov ah, 0
             mov al, bl
             shr ax, 1
             shr ax, 1
-            add di, ax                          ;   di += (x0 >> 2);
+            add di, ax                          ;       di += (x0 >> 2);
 
             mov ax, 0xa000
             mov cl, bl
             and cl, 3
             shl cl, 1
-            shr ax, cl                          ;   ax = 0xa000 >> ((x0 & 3) << 1);
+            shr ax, cl                          ;       ax = 0xa000 >> ((x0 & 3) << 1);
 
-            or [es:di], ah                      ;   *di |= ah;
+            or [es:di], ah                      ;       *di |= ah;
 
             or al, al                           
-            jz .no2ndWrite                      ;   if (al != 0) {
+            jz .no2ndWrite                      ;       if (al != 0) {
                 inc di
-                or [es:di], al                  ;       *(di + 1) |= al;
-            .no2ndWrite:                        ;   }
+                or [es:di], al                  ;           *(di + 1) |= al;
+            .no2ndWrite:                        ;       }
             ; ----------------------------------------------------------------------------------------------------------
 
             .x1_0:
                 cmp bl, 0xff                    ;       modified code: cmp bl, x1 
-            jne .ptsNotEq                       ;       if (x0 == x1) {
-                mov ah, bh                                    
+            jne .ptsNotEq                       ;       if (x0 == x1) {                                  
                 .y1_0:    
-                    cmp ah, 0xff                ;           modified code: cmp ah, y1
+                    cmp bh, 0xff                ;           modified code: cmp y0, y1
                                                 ;           if (y0 == y1) {
                 je .endPlotLoop                 ;               break;          
             .ptsNotEq:                          ;           }   
                                                 ;       }
 
-            mov ah, [err]
+            mov ah, ch
             shl ah, 1                           ;       ah = err << 1;
 
             .delY_0:
                 cmp ah, 0xff                    ;       modified code: cmp ah, delY
-            js .e2dyEnd                         ;       if (ah >= delY) {
-                mov al, bl                    
+            js .e2dyEnd                         ;       if (ah >= delY) {                  
                 .x1_1:
-                    cmp al, 0xff                ;           modified code: cmp al, x1
+                    cmp bl, 0xff                ;           modified code: cmp x0, x1
                                                 ;           if (x0 == x1) {         
                 je .endPlotLoop                 ;               break;
                                                 ;           }
 
-                mov al, [err]
                 .delY_1:                   
-                    add al, 0xff                ;           modified code: add al, delY
-                mov [err], al                   ;           err += delY;
+                    add ch, 0xff                ;           modified code: add err, delY
                 
                 .stepX:
                     inc bl                      ;           modified code: ++x0; or --x0;                
@@ -144,17 +138,16 @@ section .text
             .delX_1:
                 mov al, 0xff                    ;       modified code: mov al, delX
             cmp al, ah                         
-            js .dxe2End                         ;       if (delX >= ah) {
-                mov al, bh                   
+            js .dxe2End                         ;       if (delX >= ah) {                 
                 .y1_1:
-                    cmp al, 0xff                ;           modified code: cmp al, y1                    
+                    cmp bh, 0xff                ;           modified code: cmp y0, y1                    
                                                 ;           if (y0 == y1) {
                 je .endPlotLoop                 ;               break;                                                
                                                 ;           }
-                mov al, [err]
+                mov al, ch
                 .delX_2:                   
                     add al, 0xff                ;           modified code: add al, delX
-                mov [err], al                   ;           err += delX;
+                mov ch, al                   ;           err += delX;
                 
                 inc bh                          ;           ++y0;                
             .dxe2End:                           ;       }            
@@ -193,7 +186,6 @@ section .text
 section .data
 
     lines   dw  522
-    err     db  0
 
     endpoints:
         dd 0x64765f7a, 0x66745f7c, 0x5e885e7e, 0x67766677, 0x76687564, 0x7566695a, 0x4c964c8c, 0x55735073, 0x75656a5a
