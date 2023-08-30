@@ -49,7 +49,7 @@ section .text
             mov byte [.stepX+1], 0xc3           ;       modify code: inc x0
         .delXEnd:                               ;   }
         mov [.delX_1+1], ah                     ;   modify code: mov al, delX
-        mov [.delX_2+1], ah                     ;   modify code: add al, delX
+        mov [.delX_2+2], ah                     ;   modify code: add err, delX
         mov ch, ah                              ;   err = delX;
         
         mov ah, [si]                            ;   y1 = *si;
@@ -132,7 +132,7 @@ section .text
                     add ch, 0xff                ;           modified code: add err, delY
                 
                 .stepX:
-                    inc bl                      ;           modified code: ++x0; or --x0;                
+                    inc bl                      ;           modified code: inc x0 / dec x0                
             .e2dyEnd:                           ;       }
 
             .delX_1:
@@ -142,12 +142,11 @@ section .text
                 .y1_1:
                     cmp bh, 0xff                ;           modified code: cmp y0, y1                    
                                                 ;           if (y0 == y1) {
-                je .endPlotLoop                 ;               break;                                                
+                je .endPlotLoop                 ;               break;
                                                 ;           }
-                mov al, ch
-                .delX_2:                   
-                    add al, 0xff                ;           modified code: add al, delX
-                mov ch, al                   ;           err += delX;
+                
+                .delX_2:
+                    add ch, 0xff                ;           modified code: add err, delX                    
                 
                 inc bh                          ;           ++y0;                
             .dxe2End:                           ;       }            
