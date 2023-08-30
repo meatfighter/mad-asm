@@ -26,7 +26,8 @@ section .text
     mov bx, 0100h
     int 10h
 
-    ; Draw line segments        
+    ; Draw line segments
+    mov dx, 522                                 ;   lines = 522;
     mov si, endpoints                           ;   si = endpoints;
     .drawLines:
         mov bl, [si]                            ;   x0 = *si;                          
@@ -99,7 +100,7 @@ section .text
 
             or [es:di], ah                      ;       *di |= ah;
 
-            or al, al                           
+            test al, al
             jz .no2ndWrite                      ;       if (al != 0) {
                 inc di
                 or [es:di], al                  ;           *(di + 1) |= al;
@@ -146,7 +147,7 @@ section .text
                                                 ;           }
                 
                 .delX_1:
-                    add ch, 0xff                ;           modified code: add err, delX                    
+                    add ch, 0xff                ;           modified code: add err, delX
                 
                 inc bh                          ;           ++y0;                
             .dxe2End:                           ;       }            
@@ -154,7 +155,7 @@ section .text
             jmp .plotLoop           
         .endPlotLoop:                           ;   }
 
-        dec word [lines]                        ;   if (--lines != 0) {
+        dec dx                                  ;   if (--lines != 0) {
         jnz .drawLines                          ;       goto drawLines;
                                                 ;   }
 
@@ -183,8 +184,6 @@ section .text
     int 21h
 
 section .data
-
-    lines   dw  522
 
     endpoints:
         dd 0x64765f7a, 0x66745f7c, 0x5e885e7e, 0x67766677, 0x76687564, 0x7566695a, 0x4c964c8c, 0x55735073, 0x75656a5a
