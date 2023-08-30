@@ -48,8 +48,8 @@ section .text
         .delXPos:                               ;   } else {
             mov byte [.stepX+1], 0xc3           ;       modify code: inc x0
         .delXEnd:                               ;   }
-        mov [.delX_1+1], ah                     ;   modify code: mov al, delX
-        mov [.delX_2+2], ah                     ;   modify code: add err, delX
+        mov [.delX_0+1], ah                     ;   modify code: mov al, delX
+        mov [.delX_1+2], ah                     ;   modify code: add err, delX
         mov ch, ah                              ;   err = delX;
         
         mov ah, [si]                            ;   y1 = *si;
@@ -135,7 +135,7 @@ section .text
                     inc bl                      ;           modified code: inc x0 / dec x0                
             .e2dyEnd:                           ;       }
 
-            .delX_1:
+            .delX_0:
                 mov al, 0xff                    ;       modified code: mov al, delX
             cmp al, ah                         
             js .dxe2End                         ;       if (delX >= ah) {                 
@@ -145,7 +145,7 @@ section .text
                 je .endPlotLoop                 ;               break;
                                                 ;           }
                 
-                .delX_2:
+                .delX_1:
                     add ch, 0xff                ;           modified code: add err, delX                    
                 
                 inc bh                          ;           ++y0;                
