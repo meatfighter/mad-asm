@@ -29,28 +29,24 @@ section .text
     ; Draw line segments        
     mov si, endpoints                           ;   si = endpoints;
     .drawLines:
-        mov ah, [si]
-        mov [x0], ah                            ;   x0 = *si;
+        mov bl, [si]                            ;   x0 = *si;                          
         inc si                                  ;   ++si;
 
-        mov ah, [si]
-        mov [y0], ah                            ;   y0 = *si;
+        mov bh, [si]                            ;   y0 = *si;
         inc si                                  ;   ++si;
 
         mov ah, [si]                            ;   x1 = *si;
-        mov [.x1_0+2], ah                       ;   modify code: cmp ah, x1
+        mov [.x1_0+2], ah                       ;   modify code: cmp bl, x1
         mov [.x1_1+1], ah                       ;   modify code: cmp al, x1
         inc si                                  ;   ++si;
 
-        sub ah, [x0]                            ;   delX = x1 - x0;
+        sub ah, bl                              ;   delX = x1 - x0;
         jns .delXPos                            ;   if (delX < 0) {
-            neg ah                              ;       delX = -delX;
-            
-            mov byte [.stepX+1], 0eh            ;       modify code: --x0;
-
+            neg ah                              ;       delX = -delX;            
+            mov byte [.stepX+1], 0xcb           ;       modify code: dec x0
             jmp .delXEnd
         .delXPos:                               ;   } else {
-            mov byte [.stepX+1], 06h            ;       modify code: ++x0;
+            mov byte [.stepX+1], 0xc3           ;       modify code: inc x0
         .delXEnd:                               ;   }
         mov [.delX_0+1], ah                     ;   modify code: add al, delX
         mov [.delX_1+1], ah                     ;   modify code: mov al, delX
@@ -61,7 +57,7 @@ section .text
         mov [.y1_1+1], ah                       ;   modify code: cmp al, y1
         inc si                                  ;   ++si;
 
-        mov al, [y0]
+        mov al, bh
         sub al, ah                              ;   delY = y0 - y1;
         mov [.delY_0+2], al                     ;   modify code: cmp ah, delY
         mov [.delY_1+1], al                     ;   modify code: add al, delY
@@ -73,7 +69,7 @@ section .text
         .plotLoop:                              ;   while (true) {
 
             ; -- draw two horizontally-adjacent red pixels at (x0, y0) and (x0 + 1, y0) --------------------------------
-            mov ah, [y0]
+            mov ah, bh
             and ah, 1
             shl ah, 1
             or ah, 0xb8
@@ -82,7 +78,7 @@ section .text
 
             mov di, 0
             mov ah, 0
-            mov al, [y0]
+            mov al, bh
             shr ax, 1
             mov cl, 4
             shl ax, cl
@@ -92,13 +88,13 @@ section .text
             add di, ax                          ;   di = 80 * (y0 >> 1);
 
             mov ah, 0
-            mov al, [x0]
+            mov al, bl
             shr ax, 1
             shr ax, 1
             add di, ax                          ;   di += (x0 >> 2);
 
             mov ax, 0xa000
-            mov cl, [x0]
+            mov cl, bl
             and cl, 3
             shl cl, 1
             shr ax, cl                          ;   ax = 0xa000 >> ((x0 & 3) << 1);
@@ -112,11 +108,10 @@ section .text
             .no2ndWrite:                        ;   }
             ; ----------------------------------------------------------------------------------------------------------
 
-            mov ah, [x0]
             .x1_0:
-                cmp ah, 0xff                    ;       modified code: cmp ah, x1 
+                cmp bl, 0xff                    ;       modified code: cmp bl, x1 
             jne .ptsNotEq                       ;       if (x0 == x1) {
-                mov ah, [y0]                                    
+                mov ah, bh                                    
                 .y1_0:    
                     cmp ah, 0xff                ;           modified code: cmp ah, y1
                                                 ;           if (y0 == y1) {
@@ -130,7 +125,7 @@ section .text
             .delY_0:
                 cmp ah, 0xff                    ;       modified code: cmp ah, delY
             js .e2dyEnd                         ;       if (ah >= delY) {
-                mov al, [x0]                    
+                mov al, bl                    
                 .x1_1:
                     cmp al, 0xff                ;           modified code: cmp al, x1
                                                 ;           if (x0 == x1) {         
@@ -143,14 +138,14 @@ section .text
                 mov [err], al                   ;           err += delY;
                 
                 .stepX:
-                    inc byte [x0]               ;           modified code: ++x0; or --x0;                
+                    inc bl                      ;           modified code: ++x0; or --x0;                
             .e2dyEnd:                           ;       }
 
             .delX_1:
                 mov al, 0xff                    ;       modified code: mov al, delX
             cmp al, ah                         
             js .dxe2End                         ;       if (delX >= ah) {
-                mov al, [y0]                    
+                mov al, bh                   
                 .y1_1:
                     cmp al, 0xff                ;           modified code: cmp al, y1                    
                                                 ;           if (y0 == y1) {
@@ -161,7 +156,7 @@ section .text
                     add al, 0xff                ;           modified code: add al, delX
                 mov [err], al                   ;           err += delX;
                 
-                inc byte [y0]                   ;           ++y0;                
+                inc bh                          ;           ++y0;                
             .dxe2End:                           ;       }            
             
             jmp .plotLoop           
@@ -198,9 +193,6 @@ section .text
 section .data
 
     lines   dw  522
-
-    x0      db  0
-    y0      db  0
     err     db  0
 
     endpoints:
