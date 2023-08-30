@@ -50,17 +50,9 @@ section .text
             mov byte [.stepX+1], 06h            ;       self-modifying code (++x0;)
         .delXEnd:                               ;   }
 
-        mov ah, [y1]
-        sub ah, [y0]
-        mov [delY], ah                          ;   delY = y1 - y0;
-        jns .delYPos                            ;   if (delY < 0) {
-            mov byte [.stepY+1], 0eh            ;       self-modifying code (--y0;)
-            jmp .delYEnd
-        .delYPos:                               ;   } else {
-            neg byte [delY]                     ;       delY = -delY;
-            
-            mov byte [.stepY+1], 06h            ;       self-modifying code (++y0;)
-        .delYEnd:                               ;   } 
+        mov ah, [y0]
+        sub ah, [y1]
+        mov [delY], ah                          ;   delY = y0 - y1;
 
         mov ah, [delX]
         add ah, [delY]
@@ -130,8 +122,7 @@ section .text
                 mov [err], al                   ;           err += delY;
                 
                 .stepX:
-                    inc byte [x0]               ;           self-modifying code: ++x0; or --x0;
-                
+                    inc byte [x0]               ;           self-modifying code: ++x0; or --x0;                
             .e2dyEnd:                           ;       }
 
             cmp [delX], ah                         
@@ -144,9 +135,7 @@ section .text
                 add al, [delX]
                 mov [err], al                   ;           err += delX;
                 
-                .stepY:
-                    inc byte [y0]               ;           self-modifying code: ++y0; or --y0;
-                
+                inc byte [y0]                   ;           ++y0;                
             .dxe2End:                           ;       }            
             
             jmp .plotLoop           
@@ -184,13 +173,13 @@ section .data
 
     lines   dw  522
 
-    x0      db  0   ; bh 
-    y0      db  0   ; bl
+    x0      db  0
+    y0      db  0
     x1      db  0 
     y1      db  0 
-    delX    db  0   ; dh
-    delY    db  0   ; dl
-    err     db  0   ; ch
+    delX    db  0
+    delY    db  0
+    err     db  0
 
     endpoints:
         dd 0x64765f7a, 0x66745f7c, 0x5e885e7e, 0x67766677, 0x76687564, 0x7566695a, 0x4c964c8c, 0x55735073, 0x75656a5a
