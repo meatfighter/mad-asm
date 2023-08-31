@@ -7,7 +7,6 @@
 ; Run in DOSBox or on a PC with a Color Graphics Adapter (CGA)
 
 cpu 8086
-bits 16
 org 100h 
  
 section .text
@@ -63,11 +62,13 @@ section .text
         mov [.y1_0+2], ah                       ;   modify code: cmp y0, y1
         mov [.y1_1+2], ah                       ;   modify code: cmp y0, y1
         inc si                                  ;   ++si;
-
+        
         mov al, bh
         sub al, ah                              ;   delY = y0 - y1;
         mov [.delY_0+2], al                     ;   modify code: cmp ah, delY
         mov [.delY_1+2], al                     ;   modify code: add err, delY
+
+        ; Skip delY sign check since y0 <= y1, implying delY <= 0 and stepY = 1
                  
         add ch, al                              ;   err += delY;
 
@@ -233,17 +234,35 @@ section .text
 
     ; waitForKeyPress() ------------------------------------------------------------------------------------------------
     .waitForKeypress:
+
+        ; Loop until keyboard buffer contains a keypress
         .waitLoop:
-            mov ah, 01h
+            ; Get keyboard status
+            mov ah, 1
             int 16h
-            jz .waitLoop
-        mov ah, 00h
-        int 16h
-        ret
+                                                ;   if (no keypress) {                                                    
+            jz .waitLoop                        ;       goto .waitLoop;
+                                                ;   }
+
+        ; Clear keyboard buffer
+        .clearLoop:    
+            ; Read keypress and discard result
+            mov ah, 0
+            int 16h
+
+            ; Get keyboard status    
+            mov ah, 1
+            int 16h
+                                                ;   if (keypress) {
+            jnz .clearLoop                      ;       goto .clearLoop;
+                                                ;   }    
+
+        ret                                     ;   return;
     ; ------------------------------------------------------------------------------------------------------------------        
 
 section .data
 
+    ; Each double word contains endpoint coordinate bytes [ y1, x1, y0, x0 ], where y0 <= y1
     endpoints:
         dd 0x64765f7a, 0x66745f7c, 0x5e885e7e, 0x67766677, 0x76687564, 0x7566695a, 0x4c964c8c, 0x55735073, 0x75656a5a
         dd 0x6a5b615a, 0x4d964d8c, 0x54744c74, 0x685a635b, 0x73c66ac8, 0x50914b7d, 0x2d98299c, 0x89608056, 0x75547054
