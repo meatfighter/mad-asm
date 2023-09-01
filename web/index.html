@@ -27,7 +27,131 @@
 
 <p class="title">T<span class="title-small">HE</span> <span class="title-big">MAD</span> <span class="title-small">X</span>86 ASM P<span class="title-small">ROGRAM</span></p>
 
+<h1>Abstract</h1>
 
+<p><a href="https://en.wikipedia.org/wiki/Mad_(magazine)" target="_blank">MAD magazine</a> No. 258 from October 1985 prominently features <a href="https://meatfighter.com/mad/" target="_blank">The MAD Computer Program</a>, a <a href="https://en.wikipedia.org/wiki/BASIC" target="_blank">BASIC</a> program that outputs the MAD logo, <a href="https://en.wikipedia.org/wiki/Alfred_E._Neuman" target="_blank">Alfred E. Neuman</a>’s face, and his iconic motto, &ldquo;What, me worry?&rdquo;. The magazine provides code in BASIC dialects for the <a href="https://en.wikipedia.org/wiki/Apple_II" target="_blank">Apple II series</a>, the <a href="https://en.wikipedia.org/wiki/Atari_8-bit_family" target="_blank">Atari 8-bit family</a>, the <a href="https://en.wikipedia.org/wiki/Commodore_64" target="_blank">Commodore 64/128</a>, and <a href="https://en.wikipedia.org/wiki/IBM_Personal_Computer" target="_blank">DOS PCs</a>.</p>
+
+<p>This article presents a conversion of the PC version into <a href="https://en.wikipedia.org/wiki/X86_assembly_language" target="_blank">x86 assembly language</a>. It compares rendering times. And it explains how both programs work.</p> 
+
+<h1>Rendering Time Comparison</h1> 
+
+<p>The video below depicts <a href="https://www.dosbox.com/" target="_blank">DOSBox</a> emulating an original IBM PC (Intel 8088 @ 4.77 MHz). It shows the BASIC program load, list, and run. Over the span of <span class="nowrap">24.3 seconds</span>, Alfred E. Neuman’s face, the MAD logo, and Alfred E. Neuman’s motto materialize. Then the video moves onto the assembly language program. It takes only <span class="nowrap">0.6 seconds</span>, <span class="nowrap">40.5 times</span> faster than the BASIC program.</p>
+
+<p class="centered"><iframe width="560" height="315" src="https://www.youtube.com/embed/mGv8ldzY-Vk?si=xK0LfrMw29hDsL7B" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></p>
+
+
+<h1>Deep Dive</h1> 
+
+<p>The MAD Computer Program enters <a href="https://en.wikipedia.org/wiki/Color_Graphics_Adapter" target="_blank">CGA</a>’s medium resolution mode (320&times;200 pixels, 4 colors). It is limited to two preset color palettes with dark or light intensities, but the background can be set to any of sixteen different colors. The program selects the dark green-red-brown palette and a gray background:</p> 
+
+<pre>
+20 KEY OFF:SCREEN 1:CLS:COLOR 7,0
+</pre>
+
+<p>The assembly language program calls <a href="https://en.wikipedia.org/wiki/BIOS_interrupt_call" target="_blank">BIOS routines</a> to do the same:</p> 
+
+<pre>
+; Change to CGA's medium resolution mode (320x200 pixels, 4 colors) 
+mov ax, 0004h 
+int 10h 
+
+; Set background color to gray 
+mov ah, 0bh 
+mov bx, 0007h 
+int 10h 
+
+; Select green-red-brown palette 
+mov ah, 0bh 
+mov bx, 0100h 
+int 10h
+</pre> 
+
+<p>The MAD Computer Program produces the face and logo by drawing <span class="nowrap">522 line</span> segments. It retrieves the endpoint coordinates from <span class="mono">DATA</span> statements comprising most of the code:</p> 
+
+<pre>
+500 DATA -27,-11,-23,-6,-28,-13,-22,-6,-20,-5,-12,-5,-27,-14,-26,-13 
+510 DATA -38,-29,-42,-28,-40,-28,-50,-16,-8,13,0,13,-29,4,-29,9 
+520 DATA -50,-17,-41,-28,-49,-17,-50,-8,-8,12,0,12,-28,5,-28,13 
+530 DATA -50,-15,-49,-10,40,-26,42,-17,-4,9,-21,14,5,48,2,44 
+540 DATA -53,-39,-45,-48,-55,-23,-55,-28,-61,-23,-58,-22,-42,-39,-43,-39 
+...
+</pre> 
+
+<p>The assembly language program stores each line segment as a double word with endpoint coordinate bytes <span class="mono nowrap">[ y1, x1, y0, x0 ]</span>:</p> 
+
+<pre>
+dd 0x64765f7a, 0x66745f7c, 0x5e885e7e, 0x67766677, 0x76687564, 0x7566695a, 0x4c964c8c, 0x55735073, 0x75656a5a 
+dd 0x6a5b615a, 0x4d964d8c, 0x54744c74, 0x685a635b, 0x73c66ac8, 0x50914b7d, 0x2d98299c, 0x89608056, 0x75547054 
+dd 0x704d6f50, 0x80628064, 0x90c18dc1, 0x9170896a, 0x95779170, 0xa3a190be, 0x659d64a4, 0x64b361a7, 0x669d64a2 
+dd 0x62ae61a2, 0x6c79687a, 0x6b77687c, 0x6c7c6b78, 0x6b7a697d, 0x575b4f62, 0x68ca64c4, 0x509e4b9e, 0x518f4c8b 
+dd 0x7a917a90, 0x7d8f7d8f, 0x79907990, 0x768e768e, 0x82687967, 0x8055724c, 0x7c5a765a, 0x7a557152, 0x80677b68 
+...
+</pre>
+
+<p>The MAD Computer Program renders thick segments by drawing parallel line pairs horizontally separated by a single pixel:</p> 
+
+<pre>
+70 LINE (PX,FY)-(LX,LY),2:LINE (PX+1,FY)-(LX+1,LY),2
+</pre>
+
+<p>Since there is no BIOS routine for line drawing, the assembly language program implements <a href="https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm" target="_blank">Bresenham's algorithm</a>. The endpoints fed into the algorithm were sorted when they were packed into double words such that <span class="nowrap mono">y0 &le; y1</span>, to slightly simplify the code. And rather than drawing two lines, the assembly language program plots a single line consisting of horizontally adjacent pixel pairs.</p> 
+
+<p>There is a BIOS routine to plot a pixel, but it is inefficient. As such, the assembly language program writes directly into video RAM, where each byte stores the colors of four consecutive pixels. It handles both the case of a pixel pair within the same byte and the case when a pair is split across two bytes.</p> 
+
+<p>Annoyingly, CGA stores the even scanlines and the odd scanlines in separate banks. Although CGA provides a composite output for NTSC CRTs, the strange design is unrelated to interlaced video. Rather, it is a consequence of the timing circuitry and the scanline width (details <a href="https://en.wikipedia.org/wiki/Color_Graphics_Adapter#Limitations,_bugs_and_errata" target="_blank">here</a>). The assembly language program accounts for the separate banks when it plots pixel pairs.</p> 
+
+<p>To push performance to the max&mdash;at the expense of complexity, readability, and maintainability&mdash;the assembly language program employs <a href="https://en.wikipedia.org/wiki/Self-modifying_code" target="_blank">self-modifying code</a>. For example, in the following snippet, the program retrieves an <span class="mono">x1</span> endpoint coordinate from a double word. But instead of storing it into a variable, it injects the value directly into comparison instructions that get executed as the line drawing algorithm runs.</p> 
+
+<pre>
+mov ah, [si]                            ;   x1 = *si; 
+mov [.x1_0+2], ah                       ;   modify code: cmp x0, x1 
+mov [.x1_1+2], ah                       ;   modify code: cmp x0, x1
+</pre>
+
+<p>After drawing the face and logo, the MAD Computer Program prints the motto beneath them:</p> 
+
+<pre>
+90 LOCATE 24,13:PRINT"WHAT, ME WORRY?";
+</pre>
+
+<p>Because the motto contains an odd number of characters, it cannot be perfectly centered on the monospaced, <span class="nowrap">40-character</span> wide display. To compensate for this, the program centers the face and logo on pixel column 150 rather than 160:</p> 
+
+</pre>
+10 SIZE=1.2:XC=150:YC=110
+</pre>
+
+<p>But based on the location and width of the motto, the center should be 156. Perhaps the authors incorrectly eyeballed it.</p> 
+
+<p>Furthermore, unlike the text modes, the CGA graphics modes do not store character values in video RAM. They just store individual pixels. This means that strings can in principle be printed anywhere. But, for historical reasons, the <span class="mono">LOCATE</span> statement does not do that.</p>
+
+<p>The assembly language program relies on BIOS routines to print the motto. And those routines have the same text-positioning limitations.</p> 
+
+<p>After printing the motto, the MAD Computer Program waits for a keypress. Then, it switches to <span class="nowrap">80&times;25 character</span>, <span class="nowrap">16-color</span> text mode, where it prints the copyright message:</p> 
+
+<pre>
+110 SCREEN 0:WIDTH 80 
+120 LOCATE 12,23:PRINT"COPYRIGHT 1985 E.C. PUBLICATIONS";   
+</pre>
+
+<p>The assembly language program switches to the same text mode with yet another BIOS routine call. But it prints the copyright message by writing directly to video RAM. In the text modes, even bytes contain ASCII values, and odd bytes contain foreground and background color attribute nibbles. Like the annoyingly separated even and odd scanlines, the designers of CGA should have put the ASCII values and attributes into separate banks because strings are typically stored as contiguous bytes of ASCII in CPU RAM, string-related instructions and routines are not designed to handle attributes, and strings tend to be printed with all characters in the same attribute.</p> 
+
+<p>Finally, after waiting for a second keypress, the programs terminate.</p>
+
+<h1>Repo</h1> 
+
+<p><a href="https://github.com/meatfighter/mad-asm" target="_blank">This</a> repository contains the sources and compiled binary. Here are direct links to the <a href="https://github.com/meatfighter/mad-asm/blob/main/src/bas/mad.bas" target="_blank">BASIC</a> and <a href="https://github.com/meatfighter/mad-asm/blob/main/src/asm/mad.asm" target="_blank">ASM</a> programs.</p> 
+
+[ TODO HOW TO COMPILE AND 8086 TARGET ]
+
+<h1>Legal</h1> 
+
+ 
+
+ 
+
+  
+
+ 
 
 <hr>
 <table class="copyright">
