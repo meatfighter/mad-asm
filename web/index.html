@@ -102,7 +102,7 @@ dd 0x7a917a90, 0x7d8f7d8f, 0x79907990, 0x768e768e, 0x82687967, ...
 
 <p>Since there is no BIOS routine for line drawing, the assembly language program contains an implementation of <a href="https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm" target="_blank">Bresenham's algorithm</a>. To simplify the implementation, when the endpoint coordinates were byte-packed, they were sorted to guarantee <span class="nowrap mono">y0 &le; y1</span>. And rather than drawing two lines, the assembly language program plots a single line consisting of horizontally-adjacent pixel pairs.</p> 
 
-<p>There is a BIOS routine to plot a pixel, but it is inefficient. So, the assembly language program writes directly into video RAM, where each byte stores the colors of four consecutive pixels. The program handles both a pixel pair within the same byte, and a pair split across two bytes.</p> 
+<p>There is a BIOS routine to plot a pixel, but it is inefficient. So, the assembly language program writes directly into video RAM, where each byte stores the colors of four consecutive pixels. The program separately handles the case of a pixel pair within the same byte, and a pair split across two bytes.</p> 
 
 <p>Annoyingly, CGA stores the even-numbered scanlines and the odd-numbered scanlines in separate memory banks. Although CGA provides a composite output for NTSC CRTs, the memory layout is unrelated to interlaced video. Rather, memory was arranged to accommodate the timing circuitry and the scanline width (details <a href="https://en.wikipedia.org/wiki/Color_Graphics_Adapter#Limitations,_bugs_and_errata" target="_blank">here</a>). When the assembly language program plots pixels, it accounts for the separate banks.</p> 
 
@@ -114,7 +114,7 @@ mov [.x1_0+2], ah   ; modify code: cmp x0, x1
 mov [.x1_1+2], ah   ; modify code: cmp x0, x1
 </pre>
 
-<p>Upon drawing completion, the MAD Computer Program prints Alfred E. Neuman's motto:</p> 
+<p>Upon completion of the drawing, the MAD Computer Program prints Alfred E. Neuman's motto:</p> 
 
 <pre class="code">
 90 LOCATE 24,13:PRINT"WHAT, ME WORRY?";
@@ -160,7 +160,7 @@ cpu 8086
 
 <p class="command">nasm mad.asm <span class="nowrap">-f bin</span> <span class="nowrap">-o mad.com</span> <a class="copy" href="#" onclick="event.preventDefault(); navigator.clipboard.writeText('nasm mad.asm -f bin -o mad.com')">&#x2BBA;</a></p> 
 
-<p>To slow <a href="https://www.dosbox.com/" target="_blank">DOSBox</a> down to the speed of an original <span class="nowrap">IBM PC</span>, in the <a href="https://www.dosbox.com/wiki/Dosbox.conf" target="_blank">DOSBox conf file</a>, adjust the <a href="https://www.dosbox.com/wiki/Performance#Emulated_CPU_equivalency" target="_blank">performance setting</a>:</p>
+<p>To slow <a href="https://www.dosbox.com/" target="_blank">DOSBox</a> down to the speed of an original <span class="nowrap">IBM PC</span>, in the <a href="https://www.dosbox.com/wiki/Dosbox.conf" target="_blank">DOSBox conf file</a>, adjust the <a href="https://www.dosbox.com/wiki/Performance#Emulated_CPU_equivalency" target="_blank">performance setting</a> below.</p>
 
 <pre class="code">
 cycles=315   # Intel 8080 @ 4.77 MHz   
