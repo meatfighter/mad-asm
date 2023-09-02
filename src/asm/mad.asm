@@ -1,10 +1,11 @@
-; MADasm
+; An x86 assembly language port of the MAD Computer Program, a BASIC program featured in MAD magazine No. 258 from 
+; October 1985 that outputs the MAD logo, Alfred E. Neuman’s face, and his iconic motto, "What, me worry?".
 ;
-; 
-
 ; compile: nasm mad.asm -f bin -o mad.com
 ;
-; Run in DOSBox or on a PC with a Color Graphics Adapter (CGA)
+; Run in DOSBox or on a PC with a Color Graphics Adapter (CGA).
+;
+; Project page: https://meatfighter.com/mad-asm
 
 cpu 8086
 org 100h 
@@ -17,7 +18,7 @@ section .text
     push bx
     push ax
 
-    ; Change to medium resolution CGA mode (320x200 pixels, 4 colors)
+    ; Change to CGA's medium-resolution mode (320x200 pixels, 4 colors)
     mov ax, 0004h
     int 10h
 
