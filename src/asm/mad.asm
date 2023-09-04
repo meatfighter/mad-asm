@@ -166,23 +166,24 @@ section .text
         jnz .drawLines                          ;       goto drawLines;
                                                 ;   }
     
-    ; Print motto at column 12 and row 23 in brown
+    ; Move cursor to column 12 and row 23
+    mov bh, 0
+    mov dx, 170ch
+    mov ah, 02h
+    int 10h
+    
+    ; Print motto in brown
     mov bx, 3
-    mov cx, 1
-    mov dx, 170Ch
+    mov cx, 1    
     mov si, motto
     .printMotto:
         mov al, [si]
         test al, al
         jz .endPrintMotto
 
-        mov ah, 02h    
+        mov ah, 0eh        
         int 10h
 
-        mov ah, 09h        
-        int 10h
-
-        inc dl
         inc si
         jmp .printMotto        
     .endPrintMotto:    
